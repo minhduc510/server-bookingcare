@@ -2,13 +2,18 @@
 const express = require('express')
 
 const env = require('~/configs/environment')
+const routes = require('~/routes')
+const errorHandlingMiddleware = require('~/middleware/errorHandlingMiddleware')
 const { CONNECT_DB } = require('./configs/sequelize')
 
 const START_SERVER = () => {
   const app = express()
 
   app.use(express.json())
+  app.use(express.urlencoded({ extended: true }))
   app.use(express.static('public/images'))
+
+  routes(app)
 
   const hostname = env.APP_HOST
   const port = env.APP_PORT
@@ -17,6 +22,7 @@ const START_SERVER = () => {
     res.end('<h1>Hello World!</h1><hr>')
   })
 
+  app.use(errorHandlingMiddleware)
   if (env.BUILD_MODE === 'production') {
     app.listen(process.env.PORT, () => {
       console.log(

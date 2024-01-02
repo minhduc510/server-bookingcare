@@ -3,13 +3,12 @@ const bcrypt = require('bcrypt')
 const { Model } = require('sequelize')
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
-      // define association here
+      this.belongsToMany(models.Role, {
+        as: 'roles',
+        through: models.UserRole,
+        foreignKey: 'user_id'
+      })
     }
   }
   User.init(
@@ -20,13 +19,10 @@ module.exports = (sequelize, DataTypes) => {
       email: DataTypes.STRING,
       phone: DataTypes.STRING,
       password: DataTypes.STRING,
-      avatar: {
-        type: DataTypes.STRING,
-        defaultValue: '/avatar-default.png'
-      },
+      avatar: DataTypes.STRING,
       gender: DataTypes.BOOLEAN,
-      roleCode: DataTypes.STRING,
-      positionId: DataTypes.INTEGER
+      status: DataTypes.INTEGER,
+      lockedAt: DataTypes.DATE
     },
     {
       sequelize,
