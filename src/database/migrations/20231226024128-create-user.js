@@ -29,16 +29,21 @@ module.exports = {
         type: Sequelize.STRING
       },
       avatar: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        defaultValue: '/avatar-default.png'
       },
       gender: {
-        type: Sequelize.BOOLEAN
+        type: Sequelize.BOOLEAN,
+        defaultValue: 0
       },
-      roleCode: {
-        type: Sequelize.STRING
+      status: {
+        type: Sequelize.INTEGER,
+        defaultValue: 1
       },
-      positionId: {
-        type: Sequelize.INTEGER
+      lockedAt: {
+        allowNull: true,
+        defaultValue: null,
+        type: Sequelize.DATE
       },
       createdAt: {
         allowNull: false,
