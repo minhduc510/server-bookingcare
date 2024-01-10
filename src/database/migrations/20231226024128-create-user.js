@@ -16,7 +16,7 @@ module.exports = {
       lastName: {
         type: Sequelize.STRING
       },
-      fullname: {
+      fullName: {
         type: Sequelize.STRING
       },
       email: {
@@ -31,6 +31,10 @@ module.exports = {
       avatar: {
         type: Sequelize.STRING,
         defaultValue: '/avatar-default.png'
+      },
+      address: {
+        type: Sequelize.STRING,
+        allowNull: true
       },
       gender: {
         type: Sequelize.BOOLEAN,

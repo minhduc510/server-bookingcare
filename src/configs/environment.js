@@ -19,7 +19,18 @@ const env = {
   // Config Token
   TTL: process.env.JWT_TTL,
   REFRESH_TTL: process.env.JWT_REFRESH_TTL,
-  SECRET: process.env.JWT_SECRET
+  EMAIL_TTL: process.env.JWT_EMAIL_TTL,
+  SECRET: process.env.JWT_SECRET,
+
+  // Email
+  EMAIL: process.env.EMAIL,
+  EMAIL_PASS: process.env.EMAIL_PASS,
+
+  //URL CLIENT
+  URL_CLIENT: 'http://localhost:5173',
+
+  //PAGINATION
+  ITEM_PER_PAGE: 5
 }
 
 module.exports = env
