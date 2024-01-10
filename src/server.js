@@ -1,14 +1,17 @@
 /* eslint-disable no-console */
+const cors = require('cors')
 const express = require('express')
 
 const env = require('~/configs/environment')
 const routes = require('~/routes')
+const corsOptions = require('~/configs/cors')
 const errorHandlingMiddleware = require('~/middleware/errorHandlingMiddleware')
 const { CONNECT_DB } = require('./configs/sequelize')
 
 const START_SERVER = () => {
   const app = express()
 
+  app.use(cors(corsOptions))
   app.use(express.json())
   app.use(express.urlencoded({ extended: true }))
   app.use(express.static('public/images'))

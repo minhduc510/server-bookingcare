@@ -33,6 +33,14 @@ const authValidation = {
 
   refreshTokenSchema: Joi.object({
     token: Joi.string().required()
+  }),
+
+  sendMailGetPassWordSchema: Joi.object({
+    email: Joi.string().email().max(191).required()
+  }),
+
+  recoverPassWordSchema: Joi.object({
+    password: Joi.string().min(4).max(191).required()
   })
 }
 

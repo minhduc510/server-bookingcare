@@ -19,6 +19,7 @@ module.exports = (sequelize, DataTypes) => {
       email: DataTypes.STRING,
       phone: DataTypes.STRING,
       password: DataTypes.STRING,
+      address: DataTypes.STRING,
       avatar: DataTypes.STRING,
       gender: DataTypes.BOOLEAN,
       status: DataTypes.INTEGER,
@@ -29,9 +30,6 @@ module.exports = (sequelize, DataTypes) => {
       modelName: 'User'
     }
   )
-  User.addHook('beforeValidate', (user) => {
-    user.fullName = user.firstName + ' ' + user.lastName
-  })
 
   User.addHook('beforeCreate', async (user) => {
     const hashedPassword = await bcrypt.hash(
@@ -39,6 +37,10 @@ module.exports = (sequelize, DataTypes) => {
       8
     )
     user.password = hashedPassword
+    user.fullName = user.firstName + ' ' + user.lastName
+  })
+  User.addHook('beforeUpdate', async (user) => {
+    user.fullName = user.firstName + ' ' + user.lastName
   })
   return User
 }

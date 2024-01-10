@@ -1,6 +1,7 @@
 const TOKEN_TYPES = {
   ACCESS: 'access',
-  REFRESH: 'refresh'
+  REFRESH: 'refresh',
+  EMAIL: 'email'
 }
 
 module.exports = TOKEN_TYPES
