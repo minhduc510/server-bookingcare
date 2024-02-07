@@ -1,5 +1,3 @@
-const fs = require('fs')
-
 const slideService = require('~/services/slide.service')
 const ApiError = require('~/utils/ApiError')
 const handleFile = require('~/utils/handleFile')

@@ -18,6 +18,14 @@ const userValidation = {
     address: Joi.string().min(5).max(255).required(),
     gender: Joi.number().valid(0, 1).required(),
     password: Joi.string().min(4).max(191).required(),
+    description: Joi.string().min(5),
+    priceFrom: Joi.number(),
+    priceTo: Joi.number(),
+    specialist: Joi.number(),
+    nameClinic: Joi.string().min(5).max(255),
+    addressClinic: Joi.string().min(5).max(255),
+    markdown: Joi.string().min(5),
+    html: Joi.string().min(5),
     roles: Joi.array()
       .items(
         Joi.string().valid(
@@ -26,7 +34,8 @@ const userValidation = {
           ROLE_TYPES.CLIENT
         )
       )
-      .required()
+      .required(),
+    positions: Joi.array().items(Joi.number())
   }),
   userNotRequiredSchema: Joi.object({
     email: Joi.string().email().max(191),
@@ -44,13 +53,25 @@ const userValidation = {
     gender: Joi.number().valid(0, 1),
     address: Joi.string().min(5).max(255),
     password: Joi.string().min(4).max(191),
+    description: Joi.string().min(5),
+    priceFrom: Joi.number(),
+    specialist: Joi.number(),
+    priceTo: Joi.number(),
+    nameClinic: Joi.string().min(5).max(255),
+    addressClinic: Joi.string().min(5).max(255),
+    markdown: Joi.string().min(5),
+    html: Joi.string().min(5),
     roles: Joi.array().items(
       Joi.string().valid(
         ROLE_TYPES.ADMIN,
         ROLE_TYPES.DOCTOR,
         ROLE_TYPES.CLIENT
       )
-    )
+    ),
+    positions: Joi.array().items(Joi.number())
+  }),
+  outstandingDoctorSchema: Joi.object({
+    doctors: Joi.array().items(Joi.number()).required()
   })
 }
 

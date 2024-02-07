@@ -5,6 +5,7 @@ const authController = require('~/controllers/auth.controller')
 const validate = require('~/middleware/validate')
 const authMiddleware = require('~/middleware/authMiddleware')
 const authSchema = require('~/validations/auth.validation')
+const roleLoginMiddleware = require('~/middleware/roleLoginMiddleware')
 
 route.post(
   '/register',
@@ -14,6 +15,7 @@ route.post(
 route.post(
   '/login',
   validate(authSchema.loginSchema),
+  roleLoginMiddleware(),
   authController.login
 )
 route.get(
