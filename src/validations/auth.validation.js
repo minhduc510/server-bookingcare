@@ -15,6 +15,7 @@ const authValidation = {
       }),
     firstName: Joi.string().min(2).max(191).required(),
     lastName: Joi.string().min(2).max(191).required(),
+    address: Joi.string().min(5).max(255).required(),
     gender: Joi.number().valid(0, 1).required(),
     password: Joi.string().min(4).max(191).required(),
     _type: Joi.string()
@@ -28,7 +29,14 @@ const authValidation = {
 
   loginSchema: Joi.object({
     email: Joi.string().email().max(191).required(),
-    password: Joi.string().min(4).max(191).required()
+    password: Joi.string().min(4).max(191).required(),
+    _type: Joi.string()
+      .valid(
+        ROLE_TYPES.ADMIN,
+        ROLE_TYPES.DOCTOR,
+        ROLE_TYPES.CLIENT
+      )
+      .required()
   }),
 
   refreshTokenSchema: Joi.object({

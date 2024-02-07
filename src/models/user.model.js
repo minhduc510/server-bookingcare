@@ -9,6 +9,35 @@ module.exports = (sequelize, DataTypes) => {
         through: models.UserRole,
         foreignKey: 'user_id'
       })
+      this.belongsToMany(models.Position, {
+        as: 'positions',
+        through: models.PositionDoctor,
+        foreignKey: 'user_id'
+      })
+      this.hasOne(models.OutstandingDoctor, {
+        as: 'outstanding',
+        foreignKey: 'user_id'
+      })
+      this.hasOne(models.DoctorInfo, {
+        as: 'doctor_info',
+        foreignKey: 'user_id'
+      })
+      this.hasMany(models.MedicalExaminationDay, {
+        as: 'schedule_day',
+        foreignKey: 'user_id'
+      })
+      this.hasMany(models.MedicalExaminationHour, {
+        as: 'schedule_hour',
+        foreignKey: 'user_id'
+      })
+      this.hasMany(models.Booking, {
+        as: 'doctor_booking',
+        foreignKey: 'doctor_id'
+      })
+      this.hasMany(models.Booking, {
+        as: 'patient_booking',
+        foreignKey: 'patient_id'
+      })
     }
   }
   User.init(

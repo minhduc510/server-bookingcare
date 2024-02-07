@@ -30,7 +30,7 @@ const env = {
   URL_CLIENT: 'http://localhost:5173',
 
   //PAGINATION
-  ITEM_PER_PAGE: 5
+  ITEM_PER_PAGE: 8
 }
 
 module.exports = env

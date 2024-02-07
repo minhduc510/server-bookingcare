@@ -2,8 +2,12 @@ const db = require('~/models')
 
 const ApiError = require('~/utils/ApiError')
 const ROLE_TYPES = require('~/constants/role')
+const handleFile = require('~/utils/handleFile')
 const userService = require('~/services/user.service')
 const roleService = require('~/services/role.service')
+const scheduleService = require('~/services/schedule.service')
+const positionService = require('~/services/position.service')
+const bookingService = require('~/services/booking.service')
 
 const handleTrimValue = require('~/utils/handleTrimValue')
 
@@ -14,8 +18,11 @@ const userCurrent = async (req, res, next) => {
     if (!user) {
       throw new ApiError(401, 'Unauthorized.')
     }
+    const totalBooking =
+      await bookingService.countBookingOfPatient(userId)
     user.avatar =
       req.protocol + '://' + req.get('host') + user.avatar
+    user.totalBooking = totalBooking
     return res.json({
       error: false,
       user
@@ -52,11 +59,29 @@ const getUser = async (req, res, next) => {
 
 const createUser = async (req, res, next) => {
   try {
-    const { roles, ...data } = req.body
+    let { roles, positions, ...rest } = req.body
+    let {
+      nameClinic,
+      addressClinic,
+      priceFrom,
+      priceTo,
+      description,
+      markdown,
+      html,
+      specialist,
+      ...data
+    } = rest
+    const avatar = `/${req.filename}`
     if (
       await userService.checkExistsEmail(data.email.trim())
     ) {
+      if (req.filename) {
+        handleFile.deleteFile(avatar)
+      }
       throw new ApiError(409, 'Email đã tồn tại!')
+    }
+    if (req.filename) {
+      data = { ...data, avatar }
     }
     const dataUser = handleTrimValue(data)
     const user = await userService.createUser(dataUser)
@@ -71,7 +96,42 @@ const createUser = async (req, res, next) => {
       user_id: user.id,
       role_id: item
     }))
+
     await roleService.createBulkRoleForUser(dataRoleUser)
+    if (positions && positions.length > 0) {
+      const dataPositionUser = positions.map((item) => ({
+        user_id: user.id,
+        position_id: Number(item)
+      }))
+      await positionService.createBulkPositionForUser(
+        dataPositionUser
+      )
+    }
+    if (
+      nameClinic &&
+      addressClinic &&
+      priceFrom &&
+      priceTo &&
+      description &&
+      specialist
+    ) {
+      const data = {
+        user_id: user.id,
+        nameClinic,
+        addressClinic,
+        priceFrom,
+        priceTo,
+        description,
+        specialist_id: specialist
+      }
+      if (markdown) {
+        data.markdown = markdown
+      }
+      if (html) {
+        data.html = html
+      }
+      await userService.createDoctorInfo(data)
+    }
     return res.json({
       error: false,
       message: 'Tạo User thành công'
@@ -84,9 +144,27 @@ const createUser = async (req, res, next) => {
 const updateUser = async (req, res, next) => {
   try {
     const userId = req.params.userId
-    const { roles, ...data } = req.body
+    const avatar = `/${req.filename}`
+    let { roles, positions, ...rest } = req.body
+    let {
+      nameClinic,
+      addressClinic,
+      priceFrom,
+      priceTo,
+      description,
+      markdown,
+      html,
+      specialist,
+      ...data
+    } = rest
+    if (req.filename) {
+      data = { ...data, avatar }
+    }
     const user = await userService.getUserById(userId)
     if (!user) {
+      if (req.filename) {
+        handleFile.deleteFile(avatar)
+      }
       throw new ApiError(401, 'Unauthorized.')
     }
     if (Object.keys(data).length) {
@@ -96,9 +174,16 @@ const updateUser = async (req, res, next) => {
           data.email.trim()
         ))
       ) {
+        handleFile.deleteFile(avatar)
         throw new ApiError(409, 'Email đã tồn tại!')
       }
       const dataBody = handleTrimValue(data)
+      if (
+        req.filename &&
+        handleFile.checkFileExist(user.avatar)
+      ) {
+        handleFile.deleteFile(user.avatar)
+      }
       await userService.updateUserById(userId, dataBody)
     }
     if (roles && roles.length) {
@@ -114,6 +199,43 @@ const updateUser = async (req, res, next) => {
         role_id: item
       }))
       await roleService.createBulkRoleForUser(dataRoleUser)
+    }
+    if (positions && positions.length > 0) {
+      await positionService.deleteBulkPositionForUser(
+        user.id
+      )
+      const dataPositionUser = positions.map((item) => ({
+        user_id: user.id,
+        position_id: Number(item)
+      }))
+      await positionService.createBulkPositionForUser(
+        dataPositionUser
+      )
+    }
+    if (
+      nameClinic &&
+      addressClinic &&
+      priceFrom &&
+      priceTo &&
+      description &&
+      specialist
+    ) {
+      const data = {
+        user_id: user.id,
+        nameClinic,
+        addressClinic,
+        priceFrom,
+        priceTo,
+        description,
+        specialist_id: specialist
+      }
+      if (markdown) {
+        data.markdown = markdown
+      }
+      if (html) {
+        data.html = html
+      }
+      await userService.updateDoctorInfo(userId, data)
     }
     return res.json({
       error: false,
@@ -131,7 +253,11 @@ const deleteUser = async (req, res, next) => {
     if (!user) {
       throw new ApiError(401, 'Unauthorized.')
     }
+    if (handleFile.checkFileExist(user.avatar)) {
+      handleFile.deleteFile(user.avatar)
+    }
     await userService.deleteUserById(userId)
+    await userService.deleteAllDoctorInfo(userId)
     await roleService.deleteAllRoleOfUser(userId)
     return res.json({
       error: false,
@@ -180,8 +306,9 @@ const getClients = async (req, res, next) => {
 
 const getDoctors = async (req, res, next) => {
   try {
-    const queries = {
-      page: req.query.page ? req.query.page : 1
+    const queries = {}
+    if (req.query.page) {
+      queries.page = req.query.page ? req.query.page : 1
     }
     if (req.query.keyword) {
       queries.keyword = req.query.keyword
@@ -214,6 +341,61 @@ const getDoctors = async (req, res, next) => {
   }
 }
 
+const getDoctorsDetail = async (req, res, next) => {
+  try {
+    const { doctorId } = req.params
+    const user = await userService.getUserDoctorById(
+      doctorId
+    )
+    if (!user) {
+      throw new ApiError(401, 'Unauthorized.')
+    }
+    await scheduleService.removeScheduleInPastById(doctorId)
+    const schedule = await scheduleService.getDays(doctorId)
+    user.avatar =
+      req.protocol + '://' + req.get('host') + user.avatar
+    user.schedule_day = schedule ? schedule : []
+    return res.json({
+      error: false,
+      user
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const setOutstandingDoctor = async (req, res, next) => {
+  try {
+    const { doctors } = req.body
+    await userService.deleteAllOutstandingDoctor()
+    await userService.setOutstandingDoctor(
+      doctors.map((item) => ({ user_id: item }))
+    )
+    return res.json({
+      error: false,
+      message: 'Cập nhật thành công'
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const getOutstandingDoctor = async (req, res, next) => {
+  try {
+    const users = await userService.getOutstandingDoctor()
+    users.forEach((el) => {
+      el.avatar =
+        req.protocol + '://' + req.get('host') + el.avatar
+    })
+    return res.json({
+      error: false,
+      users
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   userCurrent,
   getUser,
@@ -221,5 +403,8 @@ module.exports = {
   updateUser,
   deleteUser,
   getClients,
-  getDoctors
+  getDoctors,
+  getDoctorsDetail,
+  setOutstandingDoctor,
+  getOutstandingDoctor
 }

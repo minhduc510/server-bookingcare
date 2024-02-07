@@ -1,18 +1,19 @@
+const fs = require('fs')
+const db = require('~/models')
+const bcrypt = require('bcrypt')
+const { dirname } = require('path')
 const nodemailer = require('nodemailer')
 const handlebars = require('handlebars')
-const fs = require('fs')
-const { dirname } = require('path')
-const bcrypt = require('bcrypt')
 const appDir = dirname(require.main.filename)
-const db = require('~/models')
 
 const ApiError = require('~/utils/ApiError')
+const env = require('~/configs/environment')
 const ROLE_TYPES = require('~/constants/role')
 const userService = require('~/services/user.service')
 const roleService = require('~/services/role.service')
 const authService = require('~/services/auth.service')
 const tokenService = require('~/services/token.service')
-const env = require('~/configs/environment')
+const handleTrimValue = require('~/utils/handleTrimValue')
 
 const login = async (req, res, next) => {
   try {
@@ -84,17 +85,17 @@ const login = async (req, res, next) => {
 const register = async (req, res, next) => {
   try {
     const body = req.body
-
+    const { _type, gender, ...rest } = body
     if (
-      await userService.checkExistsEmail(body.email.trim())
+      await userService.checkExistsEmail(rest.email.trim())
     ) {
       throw new ApiError(409, 'Email đã tồn tại!')
     }
 
     let nameRole = ''
-    if (body._type === ROLE_TYPES.DOCTOR)
+    if (_type === ROLE_TYPES.DOCTOR)
       nameRole = ROLE_TYPES.DOCTOR
-    if (body._type === ROLE_TYPES.CLIENT)
+    if (_type === ROLE_TYPES.CLIENT)
       nameRole = ROLE_TYPES.CLIENT
 
     const role = await roleService.getRoleByName(nameRole)
@@ -104,16 +105,12 @@ const register = async (req, res, next) => {
     }
 
     let status = 1
-    if (body._type === ROLE_TYPES.DOCTOR) status = 0
-    if (body._type === ROLE_TYPES.CLIENT) status = 1
+    if (_type === ROLE_TYPES.DOCTOR) status = 0
+    if (_type === ROLE_TYPES.CLIENT) status = 1
 
     const user = await userService.createUser({
-      email: body.email.trim(),
-      firstName: body.firstName.trim(),
-      lastName: body.lastName.trim(),
-      phone: body.phone.trim(),
-      gender: body.gender.trim(),
-      password: body.password.trim(),
+      ...handleTrimValue(rest),
+      gender,
       status
     })
 

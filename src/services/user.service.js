@@ -2,10 +2,11 @@
 var { Op } = require('sequelize')
 
 const db = require('~/models')
+const env = require('~/configs/environment')
 const paginate = require('~/utils/pagination')
 const ROLE_TYPES = require('~/constants/role')
+const handleTime = require('~/utils/handleTime')
 const roleService = require('~/services/role.service')
-const env = require('~/configs/environment')
 
 const createUser = async (data) => {
   const user = await db.User.create(data)
@@ -13,12 +14,13 @@ const createUser = async (data) => {
 }
 
 const getUserById = async (id, options) => {
-  return await db.User.findOne({
+  const user = await db.User.findOne({
     where: { id },
     attributes: [
       'id',
       'firstName',
       'lastName',
+      'fullName',
       'email',
       'phone',
       'avatar',
@@ -27,6 +29,66 @@ const getUserById = async (id, options) => {
     ],
     ...options
   })
+  return user.get({ plain: true })
+}
+
+const getUserDoctorById = async (id) => {
+  let user = await db.User.findOne({
+    where: { id },
+    attributes: [
+      'id',
+      'fullName',
+      'firstName',
+      'lastName',
+      'email',
+      'phone',
+      'avatar',
+      'address',
+      'status',
+      'gender'
+    ],
+    include: [
+      {
+        model: db.DoctorInfo,
+        foreignKey: 'user_id',
+        as: 'doctor_info',
+        attributes: {
+          exclude: ['createdAt', 'updatedAt']
+        },
+        include: [
+          {
+            model: db.Specialist,
+            foreignKey: 'specialist_id',
+            as: 'specialist',
+            attributes: ['id', 'name']
+          }
+        ]
+      },
+      {
+        model: db.Position,
+        foreignKey: 'user_id',
+        as: 'positions',
+        attributes: ['id', 'name']
+      },
+      {
+        model: db.Role,
+        foreignKey: 'user_id',
+        as: 'roles',
+        attributes: ['id', 'name']
+      }
+    ]
+  })
+  user = user.get({ plain: true })
+  if (user.positions.length > 0) {
+    user.positions = user.positions.map((item) => ({
+      id: item.id,
+      name: item.name.trim()
+    }))
+  }
+  if (user.roles.length > 0) {
+    user.roles = user.roles.map((item) => item.name.trim())
+  }
+  return user
 }
 
 const getUserByEmail = async (email, options) => {
@@ -34,6 +96,23 @@ const getUserByEmail = async (email, options) => {
     where: { email },
     ...options
   })
+}
+
+const getRolesUserByEmail = async (email) => {
+  let user = await db.User.findOne({
+    where: { email },
+    include: [
+      {
+        model: db.Role,
+        foreignKey: 'user_id',
+        as: 'roles',
+        attributes: ['name']
+      }
+    ]
+  })
+  user = user.get({ plain: true })
+  user.roles = user.roles.map((item) => item.name)
+  return user
 }
 
 const updateUserById = async (id, options) => {
@@ -128,6 +207,7 @@ const getAllUserClient = async (options) => {
 
 const getAllUserDoctor = async (options) => {
   const { page, ...queries } = options
+  const pagination = page ? { ...paginate(page) } : {}
   let dataQueries = {}
   if (queries.keyword) {
     const dataSearch = {
@@ -186,13 +266,30 @@ const getAllUserDoctor = async (options) => {
         foreignKey: 'user_id',
         as: 'roles',
         attributes: ['name']
+      },
+      {
+        model: db.Position,
+        foreignKey: 'user_id',
+        as: 'positions',
+        attributes: ['id', 'name']
+      },
+      {
+        model: db.OutstandingDoctor,
+        foreignKey: 'user_id',
+        as: 'outstanding',
+        attributes: ['user_id']
       }
     ],
-    ...paginate(page)
+    ...pagination
   })
   usersData = usersData.map((el) => el.get({ plain: true }))
   return usersData.map((user) => {
     user.roles = user.roles.map((role) => role.name)
+    user.positions = user.positions.map((position) => ({
+      id: position.id,
+      name: position.name
+    }))
+    user.outstanding = !!user.outstanding
     delete user.UserRole
     return user
   })
@@ -246,6 +343,69 @@ const getTotalUserAndTotalPageByRole = async (
   }
 }
 
+const getOutstandingDoctor = async (ids) => {
+  let usersData = await db.OutstandingDoctor.findAll({
+    include: [
+      {
+        model: db.User,
+        as: 'user',
+        foreignKey: 'user_id',
+        include: [
+          {
+            model: db.Position,
+            as: 'positions',
+            foreignKey: 'user_id'
+          }
+        ]
+      }
+    ]
+  })
+  usersData = usersData.map((el) => el.get({ plain: true }))
+  usersData = usersData.map((el) => ({
+    id: el.user.id,
+    firstName: el.user.firstName,
+    lastName: el.user.lastName,
+    fullName: el.user.fullName,
+    email: el.user.email,
+    phone: el.user.phone,
+    address: el.user.address,
+    avatar: el.user.avatar,
+    positions: el.user.positions.map((item) => item.name)
+  }))
+  return usersData
+}
+
+const setOutstandingDoctor = async (ids) => {
+  return await db.OutstandingDoctor.bulkCreate(ids)
+}
+
+const deleteAllOutstandingDoctor = async () => {
+  return await db.OutstandingDoctor.destroy({ where: {} })
+}
+
+const createDoctorInfo = async (data) => {
+  const user = await db.DoctorInfo.create(data)
+  return user
+}
+
+const updateDoctorInfo = async (user_id, data) => {
+  const user = await db.DoctorInfo.findOne({
+    where: { user_id }
+  })
+  user.set(data)
+  return await user.save()
+}
+
+const deleteAllDoctorInfo = async (user_id) => {
+  const user = await db.DoctorInfo.findOne({
+    where: { user_id }
+  })
+  if (user) {
+    await db.DoctorInfo.destroy({ where: { user_id } })
+  }
+  return await user
+}
+
 module.exports = {
   createUser,
   getUserById,
@@ -253,8 +413,16 @@ module.exports = {
   checkExistsEmail,
   deleteUserById,
   updateUserById,
+  getUserDoctorById,
   deleteAll,
   getAllUserClient,
   getAllUserDoctor,
-  getTotalUserAndTotalPageByRole
+  setOutstandingDoctor,
+  getOutstandingDoctor,
+  getTotalUserAndTotalPageByRole,
+  deleteAllOutstandingDoctor,
+  createDoctorInfo,
+  deleteAllDoctorInfo,
+  updateDoctorInfo,
+  getRolesUserByEmail
 }
