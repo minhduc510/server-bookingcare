@@ -1,4 +1,5 @@
 const specialistService = require('~/services/specialist.service')
+const scheduleService = require('~/services/schedule.service')
 const ApiError = require('~/utils/ApiError')
 const handleFile = require('~/utils/handleFile')
 
@@ -34,6 +35,19 @@ const getSpecialist = async (req, res, next) => {
       req.get('host') +
       '/' +
       specialist.image
+    for (let i = 0; i < specialist.doctor.length; i++) {
+      const schedule = await scheduleService.getDays(
+        specialist.doctor[i]
+      )
+      specialist.doctor[i].avatar =
+        req.protocol +
+        '://' +
+        req.get('host') +
+        specialist.doctor[i].avatar
+      specialist.doctor[i].schedule_day = schedule
+        ? schedule
+        : []
+    }
     return res.json({
       error: false,
       data: specialist

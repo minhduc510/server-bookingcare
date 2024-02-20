@@ -8,10 +8,54 @@ const getAllSpecialist = async () => {
 }
 
 const getSpecialist = async (id) => {
-  const specialist = await db.Specialist.findOne({
+  let specialist = await db.Specialist.findOne({
     where: { id },
-    attributes: ['id', 'html', 'text', 'name', 'image']
+    attributes: ['id', 'html', 'text', 'name', 'image'],
+    include: [
+      {
+        model: db.DoctorInfo,
+        foreignKey: 'specialist_id',
+        as: 'doctor',
+        attributes: {
+          exclude: ['createdAt', 'updatedAt']
+        },
+        include: [
+          {
+            model: db.User,
+            foreignKey: 'user_id',
+            as: 'doctor',
+            attributes: {
+              exclude: ['createdAt', 'updatedAt']
+            },
+            include: [
+              {
+                model: db.Position,
+                foreignKey: 'user_id',
+                as: 'positions',
+                attributes: ['id', 'name']
+              }
+            ]
+          }
+        ]
+      }
+    ]
   })
+  specialist = specialist.get({ plain: true })
+  specialist.doctor = specialist.doctor.map((item) => ({
+    id: item.doctor.id,
+    avatar: item.doctor.avatar,
+    fullName: item.doctor.fullName,
+    positions: item.doctor.positions.map((position) => ({
+      id: position.id,
+      name: position.name
+    })),
+    description: item.description,
+    nameClinic: item.nameClinic,
+    addressClinic: item.addressClinic,
+    html: item.html,
+    priceFrom: item.priceFrom,
+    priceTo: item.priceTo
+  }))
   return specialist
 }
 

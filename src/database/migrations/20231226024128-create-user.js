@@ -44,6 +44,10 @@ module.exports = {
         type: Sequelize.INTEGER,
         defaultValue: 1
       },
+      typeLogin: {
+        type: Sequelize.INTEGER,
+        defaultValue: 0
+      },
       lockedAt: {
         allowNull: true,
         defaultValue: null,

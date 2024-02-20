@@ -12,6 +12,10 @@ module.exports = (sequelize, DataTypes) => {
         as: 'specialist',
         foreignKey: 'specialist_id'
       })
+      this.belongsTo(models.User, {
+        as: 'doctor',
+        foreignKey: 'user_id'
+      })
     }
   }
   DoctorInfo.init(

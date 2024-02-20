@@ -10,6 +10,7 @@ const { CONNECT_DB } = require('./configs/sequelize')
 
 const START_SERVER = () => {
   const app = express()
+  require('~/services/passport.service')
 
   app.use(cors(corsOptions))
   app.use(express.json())

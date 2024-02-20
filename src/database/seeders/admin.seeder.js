@@ -10,8 +10,6 @@ module.exports = {
     await createRole()
     await createPositionDoctor()
     await createAdminUser()
-    await createClientUser()
-    await createDoctorUser()
   },
 
   async down() {
@@ -76,104 +74,4 @@ const createAdminUser = async () => {
     user_id: admin.id,
     role_id: role_admin.id
   })
-}
-
-const createClientUser = async () => {
-  function createRandomUser() {
-    const firstName = faker.person.firstName()
-    const lastName = faker.person.lastName()
-    return {
-      id: faker.number.int({ max: 1000 }),
-      firstName,
-      lastName,
-      fullName: firstName + ' ' + lastName,
-      email: faker.internet.email(),
-      phone: faker.phone.number(),
-      address: faker.location.streetAddress(true),
-      password: faker.internet.password(),
-      gender: Math.random() >= 0.5 ? 1 : 0,
-      status: Math.random() >= 0.5 ? 1 : 0
-    }
-  }
-
-  const USERS = faker.helpers.multiple(createRandomUser, {
-    count: 17
-  })
-
-  const role_client = await db.Role.findOne({
-    where: { name: ROLE_TYPES.CLIENT }
-  })
-
-  const ROLE_USER = USERS.map((item) => ({
-    user_id: item.id,
-    role_id: role_client.id
-  }))
-
-  await db.User.bulkCreate(USERS)
-  await db.UserRole.bulkCreate(ROLE_USER)
-}
-
-const createDoctorUser = async () => {
-  function createRandomUser() {
-    const firstName = faker.person.firstName()
-    const lastName = faker.person.lastName()
-    return {
-      id: faker.number.int({ max: 1000 }),
-      firstName,
-      lastName,
-      fullName: firstName + ' ' + lastName,
-      email: faker.internet.email(),
-      phone: faker.phone.number(),
-      address: faker.location.streetAddress(true),
-      password: faker.internet.password(),
-      gender: Math.random() >= 0.5 ? 1 : 0,
-      status: Math.random() >= 0.5 ? 1 : 0
-    }
-  }
-
-  const USERS = faker.helpers.multiple(createRandomUser, {
-    count: 17
-  })
-
-  const role_client = await db.Role.findOne({
-    where: { name: ROLE_TYPES.DOCTOR }
-  })
-
-  const ROLE_USER = USERS.map((item) => ({
-    user_id: item.id,
-    role_id: role_client.id
-  }))
-
-  const POSITION_USER = USERS.map((item) => ({
-    user_id: item.id,
-    position_id: 1
-  }))
-
-  const OUTSTANDING_DOCTOR = [
-    {
-      user_id: USERS[1].id,
-      position_id: 1
-    },
-    {
-      user_id: USERS[2].id,
-      position_id: 1
-    },
-    {
-      user_id: USERS[3].id,
-      position_id: 1
-    },
-    {
-      user_id: USERS[4].id,
-      position_id: 1
-    },
-    {
-      user_id: USERS[5].id,
-      position_id: 1
-    }
-  ]
-
-  await db.User.bulkCreate(USERS)
-  await db.UserRole.bulkCreate(ROLE_USER)
-  await db.PositionDoctor.bulkCreate(POSITION_USER)
-  await db.OutstandingDoctor.bulkCreate(OUTSTANDING_DOCTOR)
 }

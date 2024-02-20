@@ -72,6 +72,10 @@ const userValidation = {
   }),
   outstandingDoctorSchema: Joi.object({
     doctors: Joi.array().items(Joi.number()).required()
+  }),
+  changePasswordSchema: Joi.object({
+    passwordOld: Joi.string().min(4).max(191).required(),
+    passwordNew: Joi.string().min(4).max(191).required()
   })
 }
 
