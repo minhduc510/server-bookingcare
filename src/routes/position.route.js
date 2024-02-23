@@ -7,11 +7,7 @@ const positionController = require('~/controllers/position.controller')
 const authMiddleware = require('~/middleware/authMiddleware')
 const positionValidation = require('~/validations/position.validation')
 
-route.get(
-  '/',
-  authMiddleware(ROLE_TYPES.ADMIN),
-  positionController.getAll
-)
+route.get('/', authMiddleware(), positionController.getAll)
 
 route.post(
   '/',

@@ -52,6 +52,7 @@ module.exports = (sequelize, DataTypes) => {
       avatar: DataTypes.STRING,
       gender: DataTypes.BOOLEAN,
       status: DataTypes.INTEGER,
+      typeLogin: DataTypes.INTEGER,
       lockedAt: DataTypes.DATE
     },
     {
@@ -61,15 +62,24 @@ module.exports = (sequelize, DataTypes) => {
   )
 
   User.addHook('beforeCreate', async (user) => {
-    const hashedPassword = await bcrypt.hash(
-      user.password,
-      8
-    )
-    user.password = hashedPassword
-    user.fullName = user.firstName + ' ' + user.lastName
+    if (!user.typeLogin) {
+      const hashedPassword = await bcrypt.hash(
+        user.password,
+        8
+      )
+      user.password = hashedPassword
+      user.fullName = user.firstName + ' ' + user.lastName
+    }
   })
   User.addHook('beforeUpdate', async (user) => {
     user.fullName = user.firstName + ' ' + user.lastName
+    if (!user.typeLogin) {
+      const hashedPassword = await bcrypt.hash(
+        user.password,
+        8
+      )
+      user.password = hashedPassword
+    }
   })
   return User
 }

@@ -50,6 +50,13 @@ const login = async (req, res, next) => {
       )
     }
 
+    if (!user.status) {
+      throw new ApiError(
+        401,
+        'Tài khoản chưa được xác nhận, vui lòng đợi quản trị viên xác nhận!'
+      )
+    }
+
     const arrRole = user.roles.map((item) => item.name)
 
     const accessToken = tokenService.createAccessToken(
@@ -232,12 +239,86 @@ const recoverPassWord = async (req, res, next) => {
     if (!user) {
       throw new ApiError(401, 'Unauthorized.')
     }
-    password = await bcrypt.hash(password, 8)
-    user.set({ password })
-    await user.save()
+    await userService.updateUserById(userId, { password })
     return res.json({
       error: false,
       message: 'Cập nhật mật khẩu thành công'
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const loginUserSocial = async (req, res, next) => {
+  try {
+    const { userId } = req.params
+    const user = await userService.getUserById(userId)
+    if (!user) {
+      throw new ApiError(401, 'Unauthorized.')
+    }
+    const accessToken = tokenService.createAccessToken(
+      user.id,
+      ROLE_TYPES.CLIENT
+    )
+
+    const refreshToken = tokenService.createRefreshToken(
+      user.id,
+      ROLE_TYPES.CLIENT
+    )
+
+    await tokenService.insertRefreshTokenForUser(
+      user.id,
+      refreshToken
+    )
+
+    return res.json({
+      error: !user,
+      message: !!user
+        ? 'Đăng nhập thành công'
+        : 'Đăng nhập thất bại',
+      data: {
+        accessToken,
+        refreshToken
+      }
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const authRoleLogin = async (req, res, next) => {
+  try {
+    let tokenFromClient =
+      req.body.token ||
+      req.query.token ||
+      req.headers.authorization
+
+    const { nameRole } = req.params
+
+    if (tokenFromClient) {
+      if (tokenFromClient.includes('Bearer')) {
+        tokenFromClient = tokenFromClient.replace(
+          'Bearer ',
+          ''
+        )
+      }
+
+      const decoded = await tokenService.verifyToken(
+        tokenFromClient
+      )
+      if (nameRole && !decoded.roles.includes(nameRole)) {
+        throw new ApiError(
+          403,
+          'Access to the requested resource is forbidden.'
+        )
+      }
+    } else {
+      throw new ApiError(403, 'No token provided.')
+    }
+
+    return res.json({
+      error: false,
+      message: 'Bạn có quyền truy cập!'
     })
   } catch (error) {
     next(error)
@@ -248,6 +329,8 @@ module.exports = {
   login,
   register,
   refreshToken,
+  authRoleLogin,
+  loginUserSocial,
   checkTokenEmail,
   recoverPassWord,
   sendMailGetPassWord

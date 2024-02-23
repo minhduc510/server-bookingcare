@@ -10,11 +10,7 @@ const fileMiddleware = require('~/middleware/fileMiddleware')
 
 route.get('/', specialistController.getAll)
 
-route.get(
-  '/:id',
-  fileMiddleware.uploadSingle,
-  specialistController.getSpecialist
-)
+route.get('/:id', specialistController.getSpecialist)
 
 route.post(
   '/',

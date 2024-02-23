@@ -37,6 +37,40 @@ route.get(
 )
 
 route.post(
+  '/outstanding-doctor',
+  authMiddleware(ROLE_TYPES.ADMIN),
+  validate(userValidation.outstandingDoctorSchema),
+  userController.setOutstandingDoctor
+)
+
+route.post(
+  '/update-current',
+  authMiddleware(),
+  fileMiddleware.uploadSingle,
+  validate(userValidation.userNotRequiredSchema),
+  userController.updateUserCurrent
+)
+
+route.put(
+  '/doctor-info',
+  authMiddleware(ROLE_TYPES.DOCTOR),
+  userController.updateDoctorInfo
+)
+
+route.post(
+  '/change-password',
+  authMiddleware(),
+  validate(userValidation.changePasswordSchema),
+  userController.updatePasswordUser
+)
+
+route.put(
+  '/active-user',
+  authMiddleware(ROLE_TYPES.ADMIN),
+  userController.activeUser
+)
+
+route.post(
   '/',
   authMiddleware(ROLE_TYPES.ADMIN),
   fileMiddleware.uploadSingle,
@@ -62,13 +96,6 @@ route.delete(
   '/:userId',
   authMiddleware(ROLE_TYPES.ADMIN),
   userController.deleteUser
-)
-
-route.post(
-  '/outstanding-doctor',
-  authMiddleware(ROLE_TYPES.ADMIN),
-  validate(userValidation.outstandingDoctorSchema),
-  userController.setOutstandingDoctor
 )
 
 module.exports = route

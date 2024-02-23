@@ -5,6 +5,7 @@ const ROLE_TYPES = require('~/constants/role')
 const handleFile = require('~/utils/handleFile')
 const userService = require('~/services/user.service')
 const roleService = require('~/services/role.service')
+const authService = require('~/services/auth.service')
 const scheduleService = require('~/services/schedule.service')
 const positionService = require('~/services/position.service')
 const bookingService = require('~/services/booking.service')
@@ -20,8 +21,10 @@ const userCurrent = async (req, res, next) => {
     }
     const totalBooking =
       await bookingService.countBookingOfPatient(userId)
-    user.avatar =
-      req.protocol + '://' + req.get('host') + user.avatar
+    if (!user.typeLogin) {
+      user.avatar =
+        req.protocol + '://' + req.get('host') + user.avatar
+    }
     user.totalBooking = totalBooking
     return res.json({
       error: false,
@@ -246,6 +249,79 @@ const updateUser = async (req, res, next) => {
   }
 }
 
+const updatePasswordUser = async (req, res, next) => {
+  try {
+    const userId = req.jwtDecoded.userId
+    const { passwordOld, passwordNew } = req.body
+    const user = await userService.getUserById(userId)
+    if (!user) {
+      throw new ApiError(401, 'Unauthorized.')
+    }
+    const userPassword =
+      await userService.getPasswordUserById(userId)
+    if (
+      await authService.comparePassword(
+        passwordOld.trim(),
+        userPassword.password
+      )
+    ) {
+      await userService.updateUserById(userId, {
+        password: passwordNew
+      })
+    } else {
+      throw new ApiError(401, 'Mật khẩu cũ không đúng')
+    }
+    return res.json({
+      error: false,
+      message: 'Đổi mật khẩu thành công'
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const updateUserCurrent = async (req, res, next) => {
+  try {
+    const userId = req.jwtDecoded.userId
+    const user = await userService.getUserById(userId)
+    if (!user) {
+      throw new ApiError(401, 'Unauthorized.')
+    }
+    if (
+      req.filename &&
+      handleFile.checkFileExist(user.avatar)
+    ) {
+      handleFile.deleteFile(user.avatar)
+    }
+    const dataBody = handleTrimValue(req.body)
+    if (req.filename) {
+      dataBody.avatar = '/' + req.filename
+    }
+    const userUpdated = await userService.updateUserById(
+      userId,
+      dataBody
+    )
+    const userRes = await userService.getUserById(
+      userUpdated.id
+    )
+
+    if (!userRes.typeLogin) {
+      userRes.avatar =
+        req.protocol +
+        '://' +
+        req.get('host') +
+        userRes.avatar
+    }
+    return res.json({
+      error: false,
+      message: 'Cập nhật thành công',
+      data: userRes
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 const deleteUser = async (req, res, next) => {
   try {
     const userId = req.params.userId
@@ -253,10 +329,14 @@ const deleteUser = async (req, res, next) => {
     if (!user) {
       throw new ApiError(401, 'Unauthorized.')
     }
-    if (handleFile.checkFileExist(user.avatar)) {
+    if (
+      !user.typeLogin &&
+      handleFile.checkFileExist(user.avatar)
+    ) {
       handleFile.deleteFile(user.avatar)
     }
     await userService.deleteUserById(userId)
+    await userService.deleteOutstandingDoctor(userId)
     await userService.deleteAllDoctorInfo(userId)
     await roleService.deleteAllRoleOfUser(userId)
     return res.json({
@@ -288,11 +368,14 @@ const getClients = async (req, res, next) => {
         queries
       )
     clients = clients.map((client) => {
-      client.avatar =
-        req.protocol +
-        '://' +
-        req.get('host') +
-        client.avatar
+      if (!client.typeLogin) {
+        client.avatar =
+          req.protocol +
+          '://' +
+          req.get('host') +
+          client.avatar
+        return client
+      }
       return client
     })
     return res.json({
@@ -325,11 +408,14 @@ const getDoctors = async (req, res, next) => {
         queries
       )
     doctors = doctors.map((doctor) => {
-      doctor.avatar =
-        req.protocol +
-        '://' +
-        req.get('host') +
-        doctor.avatar
+      if (!doctor.typeLogin) {
+        doctor.avatar =
+          req.protocol +
+          '://' +
+          req.get('host') +
+          doctor.avatar
+        return doctor
+      }
       return doctor
     })
     return res.json({
@@ -352,8 +438,10 @@ const getDoctorsDetail = async (req, res, next) => {
     }
     await scheduleService.removeScheduleInPastById(doctorId)
     const schedule = await scheduleService.getDays(doctorId)
-    user.avatar =
-      req.protocol + '://' + req.get('host') + user.avatar
+    if (!user.typeLogin) {
+      user.avatar =
+        req.protocol + '://' + req.get('host') + user.avatar
+    }
     user.schedule_day = schedule ? schedule : []
     return res.json({
       error: false,
@@ -384,12 +472,59 @@ const getOutstandingDoctor = async (req, res, next) => {
   try {
     const users = await userService.getOutstandingDoctor()
     users.forEach((el) => {
-      el.avatar =
-        req.protocol + '://' + req.get('host') + el.avatar
+      if (!el.typeLogin) {
+        el.avatar =
+          req.protocol + '://' + req.get('host') + el.avatar
+      }
     })
     return res.json({
       error: false,
       users
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const updateDoctorInfo = async (req, res, next) => {
+  try {
+    const userId = req.jwtDecoded.userId
+    const user = await userService.getUserById(userId)
+    if (!user) {
+      throw new ApiError(401, 'Unauthorized.')
+    }
+    let { positions, ...data } = req.body
+    data = handleTrimValue(handleTrimValue(data))
+    await userService.findOrCreateDoctorInfo(userId, {
+      ...data,
+      specialist_id: data.specialist
+    })
+    await positionService.createBulkPositionForUser(
+      positions.map((item) => ({
+        user_id: userId,
+        position_id: item
+      }))
+    )
+    return res.json({
+      error: false,
+      message: 'Cập nhật thông tin thành công'
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const activeUser = async (req, res, next) => {
+  try {
+    const { listActive } = req.body
+    for (const element of listActive) {
+      await userService.updateUserById(element.id, {
+        status: element.checked
+      })
+    }
+    return res.json({
+      error: false,
+      message: 'Cập nhật thông tin thành công'
     })
   } catch (error) {
     next(error)
@@ -404,7 +539,11 @@ module.exports = {
   deleteUser,
   getClients,
   getDoctors,
+  activeUser,
+  updateDoctorInfo,
   getDoctorsDetail,
+  updateUserCurrent,
+  updatePasswordUser,
   setOutstandingDoctor,
   getOutstandingDoctor
 }

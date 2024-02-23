@@ -25,7 +25,8 @@ const getUserById = async (id, options) => {
       'phone',
       'avatar',
       'address',
-      'gender'
+      'gender',
+      'typeLogin'
     ],
     ...options
   })
@@ -45,7 +46,8 @@ const getUserDoctorById = async (id) => {
       'avatar',
       'address',
       'status',
-      'gender'
+      'gender',
+      'typeLogin'
     ],
     include: [
       {
@@ -96,6 +98,14 @@ const getUserByEmail = async (email, options) => {
     where: { email },
     ...options
   })
+}
+
+const getPasswordUserById = async (id) => {
+  const user = await db.User.findOne({
+    where: { id },
+    attributes: ['password']
+  })
+  return user.get({ plain: true })
 }
 
 const getRolesUserByEmail = async (email) => {
@@ -185,7 +195,8 @@ const getAllUserClient = async (options) => {
       'address',
       'gender',
       'status',
-      'updatedAt'
+      'updatedAt',
+      'typeLogin'
     ],
     include: [
       {
@@ -258,7 +269,8 @@ const getAllUserDoctor = async (options) => {
       'address',
       'gender',
       'status',
-      'updatedAt'
+      'updatedAt',
+      'typeLogin'
     ],
     include: [
       {
@@ -355,6 +367,18 @@ const getOutstandingDoctor = async (ids) => {
             model: db.Position,
             as: 'positions',
             foreignKey: 'user_id'
+          },
+          {
+            model: db.DoctorInfo,
+            as: 'doctor_info',
+            foreignKey: 'user_id',
+            include: [
+              {
+                model: db.Specialist,
+                as: 'specialist',
+                foreignKey: 'specialist_id'
+              }
+            ]
           }
         ]
       }
@@ -370,7 +394,8 @@ const getOutstandingDoctor = async (ids) => {
     phone: el.user.phone,
     address: el.user.address,
     avatar: el.user.avatar,
-    positions: el.user.positions.map((item) => item.name)
+    positions: el.user.positions.map((item) => item.name),
+    specialist: el.user.doctor_info.specialist.name
   }))
   return usersData
 }
@@ -379,12 +404,26 @@ const setOutstandingDoctor = async (ids) => {
   return await db.OutstandingDoctor.bulkCreate(ids)
 }
 
+const deleteOutstandingDoctor = async (user_id) => {
+  return await db.OutstandingDoctor.destroy({
+    where: { user_id }
+  })
+}
+
 const deleteAllOutstandingDoctor = async () => {
   return await db.OutstandingDoctor.destroy({ where: {} })
 }
 
 const createDoctorInfo = async (data) => {
   const user = await db.DoctorInfo.create(data)
+  return user
+}
+
+const findOrCreateDoctorInfo = async (user_id, data) => {
+  const user = await db.DoctorInfo.findOrCreate({
+    where: { user_id },
+    defaults: data
+  })
   return user
 }
 
@@ -417,12 +456,15 @@ module.exports = {
   deleteAll,
   getAllUserClient,
   getAllUserDoctor,
+  findOrCreateDoctorInfo,
   setOutstandingDoctor,
+  getPasswordUserById,
   getOutstandingDoctor,
   getTotalUserAndTotalPageByRole,
   deleteAllOutstandingDoctor,
   createDoctorInfo,
   deleteAllDoctorInfo,
   updateDoctorInfo,
-  getRolesUserByEmail
+  getRolesUserByEmail,
+  deleteOutstandingDoctor
 }
